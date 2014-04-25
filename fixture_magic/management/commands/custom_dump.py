@@ -15,14 +15,30 @@ from fixture_magic.utils import (add_to_serialize_list, reorder_json,
 
 class Command(BaseCommand):
     help = 'Dump multiple pre-defined sets of objects into a JSON fixture.'
-    args = "[dump_name pk [pk2 pk3 [..]]"
+    args = "[dump_name pk [pk2 pk3 [..]]|'{\"pk__in\": [id1, id2, id3, ...]}'"
 
-    def handle(self, dump_name, *pks, **options):
+    def handle(self, dump_name, *ids, **options):
         # Get the primary object
         dump_settings = settings.CUSTOM_DUMPS[dump_name]
         (app_label, model_name) = dump_settings['primary'].split('.')
         dump_me = loading.get_model(app_label, model_name)
-        objs = dump_me.objects.filter(pk__in=[int(i) for i in pks])
+        if ids[0] == '*':
+            objs = dump_me.objects.all()
+        else:
+            try:
+                objs = dump_me.objects.filter(pk__in=[int(i) for i in ids])
+            except ValueError:
+                # We might have primary keys that are longs...
+                try :
+                    objs = dump_me.objects.filter(pk__in=[long(i) for i in ids])
+                except ValueError:
+                    # or json objects for better filter control
+                    try:
+                        objs = dump_me.objects.filter(**json.loads(ids[0]))
+                    except ValueError:
+                        # Finally, we might have primary keys that are strings...
+                        objs = dump_me.objects.filter(pk__in=ids)
+
         for obj in objs:
             # get the dependent objects and add to serialize list
             for dep in dump_settings['dependents']:

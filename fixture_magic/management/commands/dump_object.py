@@ -13,7 +13,7 @@ from fixture_magic.utils import (add_to_serialize_list, serialize_me,
 class Command(BaseCommand):
     help = ('Dump specific objects from the database into JSON that you can '
             'use in a fixture')
-    args = "<[--kitchensink | -k] object_class '{\"pk__in\": [id1, id2, id3, ...]}' ]>"
+    args = "<[--kitchensink | -k] object_class pk1 [pk2 [...]]|'{\"pk__in\": [id1, id2, id3, ...]}' ]>"
 
     option_list = BaseCommand.option_list + (
             make_option('--kitchensink', '-k',
@@ -42,7 +42,19 @@ class Command(BaseCommand):
         if ids[0] == '*':
             objs = dump_me.objects.all()
         else:
-            objs = dump_me.objects.filter(**json.loads(ids[0]))
+            try:
+                objs = dump_me.objects.filter(pk__in=[int(i) for i in ids])
+            except ValueError:
+                # We might have primary keys that are longs...
+                try :
+                    objs = dump_me.objects.filter(pk__in=[long(i) for i in ids])
+                except ValueError:
+                    # or json objects for better filter control
+                    try:
+                        objs = dump_me.objects.filter(**json.loads(ids[0]))
+                    except ValueError:
+                        # Finally, we might have primary keys that are strings...
+                        objs = dump_me.objects.filter(pk__in=ids)
 
         if options.get('kitchensink'):
             related_fields = [rel.get_accessor_name() for rel in

@@ -38,7 +38,12 @@ Usage
 There are four commands.  ``dump_object`` returns the json representation of
 a specific object as well as all its dependencies (as defined by ForeignKeys).
 
-    ./manage.py dump_object APP.MODEL '{"pk__in": [PK1, PK2, PK3]}' > my_new_fixture.json
+    ./manage.py dump_object APP.MODEL PK1 PK2 PK3 ... > my_new_fixture.json
+
+Or if you need more control over your filter parameters, you can pass a json
+object
+
+    ./manage.py dump_object APP.MODEL '{"myfield__in": [value1, value2, value3]}' > my_new_fixture.json
 
 Or you can get all objects with all dependencies by passing an asterisk:
 
